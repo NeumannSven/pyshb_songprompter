@@ -9,34 +9,42 @@ import sys
 from pprint import pprint
 
 screen = None
-number = 2
+pages  = 1
 position = 1
 songnumber = 0
-rows = 24
+max_rows = 12
 strophenrows = None
 linescount = 0
 strophencount = 0
 
-songlist = [["Titel1", "Interpret1", ["Strophe1","Strophe2","Strophe3"],[1,1,1]],
-            ["Titel2", "Interpret2", ["Strophe1","Strophe2","Strophe3"],[1,1,1]],
-            ["Titel3", "Interpret3", ["Strophe1","Strophe2","Strophe3"],[1,1,1]],
-            ]
+songlist = [
+  ["Titel1", "Interpret1", ["Strophe1","Strophe2","Strophe3"],[3, 2, 2]],
+  ["Titel2", "Interpret2", ["Strophe1","Strophe2","Strophe3"],[]],
+  ["Titel3", "Interpret3", ["Strophe1","Strophe2","Strophe3"],[]],
+]
+
+# Todo: Use dict instead
+songlist_dict = [
+  {
+    "title": "Titel1",
+    "artist": "Interpret1",
+    "stanzas": ["Strophe1", "Strophe2", "..."],
+    "pagination": [2, 3, 2, 3]
+  },
+]
+
 songtext = ''
 
 title = ''
 interpreten = ''
 
 
-def updateStatus():
-    fill = 'white'
-    screen.delete('dots')
-    for dot in range(1, number+1):
-        if position == dot:
-            fill = 'black'
-        else:
-            fill = 'white'
-        screen.create_oval(20+(20*dot),20,40+(20*dot),40, fill=fill, tag="dots")
-    screen.create_text(1280/2, 30, text=songlist[songnumber][0] + " - " +  songlist[songnumber][1], font=("Courier", 20, 'bold'), tag="dots")
+# Todo: Use OOP?
+class Song:
+    pass
+
+
+
 # Up
 def up(e):
     global position
@@ -48,7 +56,7 @@ def up(e):
 # Down
 def down(e):
     global position
-    if position < number:
+    if position < pages:
         position += 1
     updateStatus()
     createScreen()
@@ -68,9 +76,11 @@ def parseSongFile():
 
 
 def loadSongs():
-    global songtext, title, interpreten, strophenrows, number
+    """Songtexte einlesen und auf mehrere Seiten verteilen
+    """
+    global songtext, title, interpreten, strophenrows, max_rows, pages
     #and_the_lamb_lies_down_on_Broadway
-    with open('and_the_lamb_lies_down_on_Broadway.txt') as songtextfile:
+    with open('pi.txt') as songtextfile:
         for line in songtextfile.readlines():
             if line.startswith('# '):
                 title = line.replace('# ', '').rstrip()
@@ -84,22 +94,48 @@ def loadSongs():
     songtext = songtext.split('\n\n')
     
     strophenrows = [len(s.lstrip('\n').split('\n')) for s in songtext]
-    print(strophenrows)
-    songlist[0] = [title, interpreten, songtext, strophenrows]
+
+    # Todo
+    songlist[0] = [title, interpreten, songtext, pagination(strophenrows)]
     
-    zeilen = 0 
-    seite = 1
-    for bubble in strophenrows:
-        zeilen += bubble + 1
-        if zeilen > 20:
-            seite += 1
-            zeilen = bubble + 1
-        
-    number = seite
-     
-        
+
+
+
+def pagination(strophenrows):
+  """Erstellt eine Liste von Indizes, um die Strophen in songlist seitenweise zu gruppieren
+  """
+    rows = 0
+    page_count = [0]
+
+    for idx, strophe in enumerate(strophenrows):
+        rows += strophe
+        if rows > max_rows:
+            rows = 0
+            page_count.append(idx)
+        if idx == (len(strophenrows)-1):
+            page_count.append(idx)
+
+    return page_count
+
+
+def updateStatus():
+    """Zeigt alle Seiten als Pills oben links, aktuelle Seite schwarz
+    """
+    fill = 'white'
+    screen.delete('dots')
+    for dot in range(1, pages+1):  # range(): start inclusive, stop exclusive
+        if position == dot:
+            fill = 'black'
+        else:
+            fill = 'white'
+        screen.create_oval(20+(20*dot),20,40+(20*dot),40, fill=fill, tag="dots")
+    screen.create_text(1280/2, 30, text=songlist[songnumber][0] + " - " +  songlist[songnumber][1], font=("Courier", 20, 'bold'), tag="dots")
+
+
 def createScreen():
-    global linescount,  strophencount
+    """
+    """
+    global linescount, strophencount, pages
     linescount = 0
     text = ''
     for count, row in enumerate(songlist[songnumber][2]):
@@ -110,6 +146,8 @@ def createScreen():
             strophencount += 1
             text += row + 2*'\n'
     
+  
+    text = songlist[songnumber][2][position-1]
     screen.delete("songtext")    
     screen.create_text(20, 80, text=text, tag="songtext", font=("Courier", 20), anchor='nw')
     
