@@ -1,154 +1,152 @@
-'''
-Created on 02.03.2021
+"""
+This tkinter module parses song lyrics in txt format and displays them for use in karaoke.
+
+Created on 02.03.2021 for PySpaceBremen
 
 @author: sven
-'''
-
+@author: christian
+"""
+import pathlib
+import random
 import tkinter
 import sys
-from pprint import pprint
 
 screen = None
-pages  = 1
 position = 1
-songnumber = 0
 max_rows = 12
-strophenrows = None
-linescount = 0
-strophencount = 0
-
-songlist = [
-  ["Titel1", "Interpret1", ["Strophe1","Strophe2","Strophe3"],[3, 2, 2]],
-  ["Titel2", "Interpret2", ["Strophe1","Strophe2","Strophe3"],[]],
-  ["Titel3", "Interpret3", ["Strophe1","Strophe2","Strophe3"],[]],
-]
-
-# Todo: Use dict instead
-songlist_dict = [
-  {
-    "title": "Titel1",
-    "artist": "Interpret1",
-    "stanzas": ["Strophe1", "Strophe2", "..."],
-    "pagination": [2, 3, 2, 3]
-  },
-]
-
-songtext = ''
-
-title = ''
-interpreten = ''
 
 
-# Todo: Use OOP?
 class Song:
-    pass
+    """Geparste Songtexte werden als Song-Objekte instanziert
+    Pagination-Logik für die Darstellung der Text in createScreen() findet ausschließlich hier statt,
+    der aktuelle Ausschnitt kann mit self.get_stanzas_for_page() erzeugt werden.
+    """
+    def __init__(self, title, artist, stanzas):
+        self.title = title
+        self.artist = artist
+        self.stanzas = stanzas
+        self._pagination = self._pagination()
+        self.pages = len(self._pagination) - 1
+
+    def __repr__(self):
+        return 'Song("{} - {}")'.format(self.artist, self.title)
+
+    def __str__(self):
+        return '{} - {}'.format(self.artist, self.title)
+
+    def _pagination(self):
+        """Erstellt eine Liste von Indizes, um die Strophen in Song (self.stanzas) seitenweise zu gruppieren
+        Bsp.:   [0, 3, 5]
+                Strophen 1-4 (Index 0:3) werden auf Seite 1 gezeigt,
+                Strophen 5-6 (Index 3:5) auf Seite 2
+        """
+        lines_in_stanza = [len(s.lstrip('\n').split('\n')) for s in self.stanzas]
+        lines_on_page = 0
+        pagination_idx = [0]
+
+        for idx, lines in enumerate(lines_in_stanza, start=1):
+            lines_on_page += lines
+            if lines_on_page >= max_rows:
+                lines_on_page = 0
+                pagination_idx.append(idx)
+            elif idx == len(lines_in_stanza):
+                pagination_idx.append(idx)
+
+        return pagination_idx
+
+    def get_stanzas_for_page(self, page=1):
+        """Nutzt die Indizes aus self._pagination um den Ausschnitt für die aktuelle Seite zu generieren
+        Die var 'page' ist identisch mit global_var 'position'
+        """
+        # Check for IndexError
+        if page > self.pages:
+            page = self.pages
+
+        if page == 1:
+            start = 0
+        else:
+            start = self._pagination[page - 1]
+        stop = self._pagination[page]
+
+        return self.stanzas[start:stop]
 
 
+def loadSongs():
+    """Liest alle txt Dateien im Ordner songtexts/ ein und erstellt eine Liste von Song-Objekten
+    """
+    songlist = []
 
-# Up
-def up(e):
+    folder = pathlib.Path('songtexts')
+
+    for file in folder.iterdir():
+        with open(file) as songtextfile:
+            songtext = ''
+            for line in songtextfile.readlines():
+                if line.startswith('# '):
+                    title = line.replace('# ', '').rstrip()
+                    continue
+                elif line.startswith('## '):
+                    artist = line.replace('## ', '').rstrip()
+                    continue
+                else:
+                    songtext += line
+
+            stanzas = songtext.split('\n\n')  # list of stanzas
+
+            new_song = Song(title=title, artist=artist, stanzas=stanzas)
+            songlist.append(new_song)
+
+    return songlist
+
+
+def updateStatus(song: Song):
+    """Zeigt alle Seiten als Pills oben links, aktuelle Pill (Seite) schwarz
+    """
+    screen.delete('dots')
+    for dot in range(1, song.pages+1):  # range(): start inclusive, stop exclusive
+        if position == dot:
+            fill = 'black'
+        else:
+            fill = 'white'
+        screen.create_oval(20+(20*dot), 20, 40+(20*dot), 40, fill=fill, tag="dots")
+    screen.create_text(1280/2, 30, text=song, font=("Courier", 20, 'bold'), tag="dots")
+
+
+# Enter
+def next_page(e, song: Song):
+    global position
+    if position < song.pages:
+        position += 1
+    updateStatus(song)
+    createScreen(song)
+
+
+# Backspace
+def previous_page(e, song: Song):
     global position
     if position > 1:
         position -= 1
-    updateStatus()
-    createScreen()
-    
-# Down
-def down(e):
-    global position
-    if position < pages:
-        position += 1
-    updateStatus()
-    createScreen()
+    updateStatus(song)
+    createScreen(song)
 
-# Enter
-def enter(e):
+
+# Space
+def show_code(e):
     print(e)
+
 
 # Escape
 def escape(e):
     sys.exit()
 
 
-def parseSongFile():
-    for line in songtext:
-        print(line)
-
-
-def loadSongs():
-    """Songtexte einlesen und auf mehrere Seiten verteilen
+def createScreen(song: Song):
+    """Zeigt einen Ausschnitt aus dem Songtext, erstellt mit Hilfe von Song._pagination()
     """
-    global songtext, title, interpreten, strophenrows, max_rows, pages
-    #and_the_lamb_lies_down_on_Broadway
-    with open('pi.txt') as songtextfile:
-        for line in songtextfile.readlines():
-            if line.startswith('# '):
-                title = line.replace('# ', '').rstrip()
-                continue
-            if line.startswith('## '):
-                interpreten = line.replace('## ', '').rstrip()
-                continue
-            #if line == ''
-            songtext += line
-            #print(line, end='')
-    songtext = songtext.split('\n\n')
-    
-    strophenrows = [len(s.lstrip('\n').split('\n')) for s in songtext]
+    stanzas_for_page = song.get_stanzas_for_page(page=position)
+    text = '\n\n'.join(stanzas_for_page)
 
-    # Todo
-    songlist[0] = [title, interpreten, songtext, pagination(strophenrows)]
-    
-
-
-
-def pagination(strophenrows):
-  """Erstellt eine Liste von Indizes, um die Strophen in songlist seitenweise zu gruppieren
-  """
-    rows = 0
-    page_count = [0]
-
-    for idx, strophe in enumerate(strophenrows):
-        rows += strophe
-        if rows > max_rows:
-            rows = 0
-            page_count.append(idx)
-        if idx == (len(strophenrows)-1):
-            page_count.append(idx)
-
-    return page_count
-
-
-def updateStatus():
-    """Zeigt alle Seiten als Pills oben links, aktuelle Seite schwarz
-    """
-    fill = 'white'
-    screen.delete('dots')
-    for dot in range(1, pages+1):  # range(): start inclusive, stop exclusive
-        if position == dot:
-            fill = 'black'
-        else:
-            fill = 'white'
-        screen.create_oval(20+(20*dot),20,40+(20*dot),40, fill=fill, tag="dots")
-    screen.create_text(1280/2, 30, text=songlist[songnumber][0] + " - " +  songlist[songnumber][1], font=("Courier", 20, 'bold'), tag="dots")
-
-
-def createScreen():
-    """
-    """
-    global linescount, strophencount, pages
-    linescount = 0
-    text = ''
-    for count, row in enumerate(songlist[songnumber][2]):
-        if count >= strophencount: 
-            linescount += len(row.split('\n'))
-            if linescount >= 20:
-                break
-            strophencount += 1
-            text += row + 2*'\n'
-    
-  
-    text = songlist[songnumber][2][position-1]
-    screen.delete("songtext")    
+    screen.delete("songtext")
     screen.create_text(20, 80, text=text, tag="songtext", font=("Courier", 20), anchor='nw')
     
 
@@ -158,23 +156,18 @@ if __name__ == '__main__':
     app.title("pySpace Song Prompter")
     screen = tkinter.Canvas(app, bg='white')
     
-    loadSongs()
-    updateStatus()
-    print(title)
-    print(interpreten)
-    #pprint(songlist)
-    #parseSongFile()
-    #print(strophenrows)
+    songlist = loadSongs()
+    # Todo: Choose a song form list; just pick a random one for now
+    current_song = random.choice(songlist)
 
-    createScreen()
-    print(strophencount)
-        
+    updateStatus(current_song)
+    createScreen(current_song)
+
     screen.pack(expand=True, fill=tkinter.BOTH)
-    
+
     app.bind('<Escape>', escape)
-    app.bind('<Return>', down)
-    app.bind('<space>', enter)
-    app.bind('<BackSpace>', up)
+    app.bind('<space>', show_code)
+    app.bind('<Return>', lambda event: next_page(event, song=current_song))
+    app.bind('<BackSpace>', lambda event: previous_page(event, song=current_song))
     
     app.mainloop()
-    
