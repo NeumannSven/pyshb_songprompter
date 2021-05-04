@@ -14,6 +14,7 @@ import sys
 screen = None
 position = 1
 max_rows = 12
+listselction = 360
 
 
 class Song:
@@ -148,22 +149,67 @@ def createScreen(song: Song):
 
     screen.delete("songtext")
     screen.create_text(20, 80, text=text, tag="songtext", font=("Courier", 20), anchor='nw')
-    
+
+def createListScreen(screen, songlist, choice):
+    """Zeigt das Inhaltsverzeichnis 
+    """
+    menu_entry = [f'\"{song.title}\" by {song.artist}' for song in songlist]
+    text = '\n'.join(menu_entry)
+
+    screen.delete("songtext")
+
+    screen.create_text(20, 360, text=text, tag="songtext", font=("Courier", 20), anchor='nw')
+    screen.create_rectangle(10, 360, 1260, 360+30, tag="selectMarker")
+
 
 if __name__ == '__main__':
     app = tkinter.Tk()
     app.geometry("1280x720+100+100")
     app.title("pySpace Song Prompter")
-    screen = tkinter.Canvas(app, bg='white')
     
     songlist = loadSongs()
     # Todo: Choose a song form list; just pick a random one for now
-    current_song = random.choice(songlist)
+    
+    # foot pedal
+    # left = backward
+    # middle = menue / select
+    # right = forward
 
+    scrollbar = tkinter.Scrollbar(app)
+    scrollbar.pack(side=tkinter.LEFT, fill=tkinter.Y)
+
+
+    scrSongList = tkinter.Canvas(app, bg='grey50', scrollregion=(0,0,1000,400), yscrollcommand=scrollbar.set)
+
+    def scrSonglistDown(*args, **kwargs):
+        global listselction
+        print(args)
+        print(kwargs)
+        listselction += (int(args[1]) * 30)
+        scrSongList.delete("selectMarker")
+        scrSongList.create_rectangle(10, listselction, 1260, listselction+30, tag="selectMarker")
+        scrSongList.yview(args[0],args[1],args[2])
+
+    #scrollbar.config(command=scrSongList.yview)
+    scrollbar.config(command=scrSonglistDown)
+
+    createListScreen(scrSongList, songlist, 3)
+    scrSongList.pack(expand=True, fill=tkinter.BOTH)
+
+    print(len(songlist))
+
+
+
+    #############################################
+    
+    scrSongText = tkinter.Canvas(app, bg='white')
+    current_song = random.choice(songlist)
+    """
     updateStatus(current_song)
     createScreen(current_song)
 
-    screen.pack(expand=True, fill=tkinter.BOTH)
+    scrSongText.pack(expand=True, fill=tkinter.BOTH)
+    """
 
     app.bind('<Escape>', escape)
     app.bind('<space>', show_code)
