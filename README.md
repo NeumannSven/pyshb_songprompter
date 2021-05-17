@@ -6,3 +6,4 @@ This tkinter module parses song lyrics in txt format and displays them for use i
 Created on 02.03.2021 for PySpaceBremen
 
 Authored by @neumannsven, @cmacht
+
