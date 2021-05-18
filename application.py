@@ -1,21 +1,21 @@
-
+ 
 import tkinter
 import sys
+
+MAX_TITLE_LEN = 40
 
 class Application(tkinter.Tk):
 
     def __init__(self, songlist):
         tkinter.Tk.__init__(self)
-        self.screen = None
+        self.screen = tkinter.Canvas(self,  bg='black')
         self.position = 1
 
         self.songlist = songlist
         self.song_number = 0
         self.song = self.songlist[self.song_number]
-        self.geometry("1280x720+0+0")
         self.attributes("-fullscreen", True)
         self.title("pySpace Song Prompter")
-        self.screen = tkinter.Canvas(self,  bg='black')
         self.create_menu()
         self.mainloop()
 
@@ -49,9 +49,9 @@ class Application(tkinter.Tk):
         self.showScreen()
 
     # Space im Song Screen
-    def song_screen(self, e):
-        self.songs_menu.pack_forget()
-        self.createScreen()
+    def menu_screen(self, e):
+        self.screen.pack_forget()
+        self.create_menu()
 
     # Enter im Menu Screen
     def next_item(self, e):
@@ -61,8 +61,6 @@ class Application(tkinter.Tk):
         self.songs_menu.see(self.song_number)
         self.songs_menu.selection_set(self.song_number)
 
-
-
     # Backspace im Menu Screen
     def previous_item(self, e):
         if self.song_number > 0:
@@ -71,11 +69,12 @@ class Application(tkinter.Tk):
         self.songs_menu.see(self.song_number)
         self.songs_menu.selection_set(self.song_number)
 
-
     # Space im Menu Screen
-    def menu_screen(self, e):
-        self.screen.pack_forget()
-        self.create_menu()
+    def song_screen(self, e):
+        self.songs_menu.pack_forget()
+        self.position = 1
+        self.song = self.songlist[self.song_number]
+        self.createScreen()
 
     def createScreen(self):
         self.screen = tkinter.Canvas(self, bg='black')
@@ -102,7 +101,7 @@ class Application(tkinter.Tk):
 
         self.songs_menu = tkinter.Listbox(self, width=50, selectmode=tkinter.SINGLE, font=("Courier", 20), fg='white', bg='black')
 
-        menu_entrys = [f'\"{song.title}\" by {song.artist}' for song in self.songlist]
+        menu_entrys = [f' {song.title}{(MAX_TITLE_LEN - len(song.title))*" "} {song.artist}' for song in self.songlist]
 
         for menu_entry in menu_entrys:
             self.songs_menu.insert(tkinter.END, menu_entry)

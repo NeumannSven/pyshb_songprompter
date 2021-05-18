@@ -10,10 +10,7 @@ Created on 02.03.2021 for PySpaceBremen
 from songs import Songs
 from application import Application
 
-
-
 songslist = Songs().loadSongs()
-#print(songslist)
 
 app = Application(songslist)
 
