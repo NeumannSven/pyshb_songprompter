@@ -7,3 +7,12 @@ Created on 02.03.2021 for PySpaceBremen
 
 Authored by @neumannsven, @cmacht
 
+
+
+
+/etc/profile
+
+export DISPLAY=:0
+unclutter &
+python3 /home/pi/pyshb_songprompter/songprompter.py &
+
